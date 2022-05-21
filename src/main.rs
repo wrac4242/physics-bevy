@@ -6,6 +6,7 @@ pub const RESOLUTION: f32 = 16.0 / 9.0;
 fn main() {
     let height = 900.0;
     App::new()
+        // resources
         .insert_resource(WindowDescriptor {
             width: height * RESOLUTION,
             height: height,
@@ -15,8 +16,15 @@ fn main() {
             present_mode: PresentMode::Mailbox,
             ..Default::default()
         })
-        .add_startup_system(spawn_camera)
+
         .add_plugins(DefaultPlugins)
+
+        // own systems
+        .add_startup_system(spawn_camera)
+        
+        // debugging
+        .add_system(bevy::input::system::exit_on_esc_system)
+        
         .run();
 }
 
