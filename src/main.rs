@@ -32,6 +32,7 @@ fn main() {
             SystemSet::new()
                 .label("apply_physics")
                 .with_system(apply_gravity)
+                .with_system(constrain_area)
         )
 
         .add_system(update_positions.after("apply_physics"))
@@ -44,13 +45,13 @@ fn main() {
 
 fn spawn_camera(mut commands: Commands) {
     let mut camera = OrthographicCameraBundle::new_2d();
-
+    
     camera.orthographic_projection.top = 1.0;
     camera.orthographic_projection.bottom = -1.0;
 
     camera.orthographic_projection.left = -1.0 * RESOLUTION;
     camera.orthographic_projection.right = 1.0 * RESOLUTION;
-
+    
     camera.orthographic_projection.scaling_mode = ScalingMode::None;
 
     commands.spawn_bundle(camera);
@@ -71,11 +72,11 @@ impl BallProperties {
 
 
 fn spawn_ball(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let radius = 100.0;
+    let radius = 100.0 / HEIGHT;
     commands.spawn_bundle(SpriteBundle {
         texture: asset_server.load("circle.png"),
         sprite: Sprite {
-            custom_size: Some(Vec2::new(1./HEIGHT * radius, 1./HEIGHT * radius)),
+            custom_size: Some(Vec2::new(radius , radius)),
             ..Default::default()
         },
         transform: Transform::from_xyz(0., 0., 10.),
@@ -93,6 +94,25 @@ fn apply_gravity(gravity: Res<Gravity>, mut query: Query<&mut BallProperties>) {
         ball.accelerate(gravity.0);
     }
 }
+
+fn constrain_area(mut query: Query<(&BallProperties, &mut Transform)>) {
+    let constraint_pos = Vec3::new(100. / HEIGHT, 0., 0.);
+    let radius = 300. / HEIGHT;
+
+    for (ball, mut transform) in query.iter_mut() {
+        let old_z = transform.translation.z;
+        let mut current_pos = transform.translation;
+        current_pos.z = 0.;
+        let to_obj = current_pos - constraint_pos;
+        let dist = to_obj.length();
+        if dist > (radius - ball.radius) {
+            let n = to_obj / dist;
+            transform.translation = constraint_pos + n * (radius - ball.radius);
+            transform.translation.z = old_z;
+        }
+    }
+}
+
 
 fn update_positions(time: Res<Time>, mut query: Query<(&mut BallProperties, &mut Transform)>) {
     for (mut properties, mut transform) in query.iter_mut() {
