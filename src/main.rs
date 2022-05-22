@@ -4,6 +4,9 @@ use bevy::window::PresentMode;
 pub const RESOLUTION: f32 = 16.0 / 9.0;
 pub const HEIGHT: f32 = 900.0;
 
+#[derive(Default)]
+struct Gravity(Vec3);
+
 fn main() {
     App::new()
         // resources
@@ -16,6 +19,7 @@ fn main() {
             present_mode: PresentMode::Mailbox,
             ..Default::default()
         })
+        .insert_resource(Gravity(Vec3::new(0.0, -1., 0.0)))
 
         .add_plugins(DefaultPlugins)
 
@@ -54,10 +58,17 @@ fn spawn_camera(mut commands: Commands) {
 
 #[derive(Component)]
 struct BallProperties {
-    prev_pos: Transform,
-    acceleration: Vec2,
+    prev_pos: Vec3,
+    acceleration: Vec3,
     radius: f32,
 }
+
+impl BallProperties {
+    pub fn accelerate(&mut self, acc: Vec3) {
+        self.acceleration += acc;
+    }
+}
+
 
 fn spawn_ball(mut commands: Commands, asset_server: Res<AssetServer>) {
     let radius = 100.0;
@@ -71,16 +82,24 @@ fn spawn_ball(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..default()
     })
     .insert(BallProperties {
-        prev_pos: Transform::from_xyz(0., 0., 10.),
-        acceleration: Vec2::new(0., 0.),
+        prev_pos: Transform::from_xyz(0., 0., 10.).translation,
+        acceleration: Vec3::new(0., 0., 0.),
         radius: radius,
     });
 }
 
-fn apply_gravity() {
-    todo!();
+fn apply_gravity(gravity: Res<Gravity>, mut query: Query<&mut BallProperties>) {
+    for mut ball in query.iter_mut() {
+        ball.accelerate(gravity.0);
+    }
 }
 
-fn update_positions() {
-    todo!();
+fn update_positions(time: Res<Time>, mut query: Query<(&mut BallProperties, &mut Transform)>) {
+    for (mut properties, mut transform) in query.iter_mut() {
+        let velocity = transform.translation - properties.prev_pos;
+        properties.prev_pos = transform.translation;
+        transform.translation = transform.translation + velocity + properties.acceleration * time.delta_seconds() * time.delta_seconds();
+
+        properties.acceleration = Vec3::new(0., 0., 0.);
+    }
 }
