@@ -12,3 +12,5 @@ cargo run --release
 ```
 
 this builds the project in release mode and then runs it.
+
+this is inspired by this [video](https://www.youtube.com/watch?v=lS_qeBy3aQI)
